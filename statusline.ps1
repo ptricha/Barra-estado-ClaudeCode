@@ -240,10 +240,10 @@ foreach ($lim in @(@('five_hour', 'Diario 5h'), @('seven_day', 'Semanal'))) {
         if ($r.resets_at) {
             try {
                 $dt = [DateTimeOffset]::FromUnixTimeSeconds([long]$r.resets_at).LocalDateTime
-                if ($dt.Date -eq $now.Date) { $rs = $dt.ToString('HH:mm') } else { $rs = $dias[[int]$dt.DayOfWeek] + ' ' + $dt.ToString('HH:mm') }
+                if ($dt.Date -eq $now.Date) { $rs = $dt.ToString('h:mm tt', [Globalization.CultureInfo]::InvariantCulture) } else { $rs = $dias[[int]$dt.DayOfWeek] + ' ' + $dt.ToString('h:mm tt', [Globalization.CultureInfo]::InvariantCulture) }
             } catch {}
         }
-        if ($rs) { $rtxt = ('  Reinicio ' + $rs).PadRight(20) } else { $rtxt = ''.PadRight(20) }
+        if ($rs) { $rtxt = ('  Reinicio ' + $rs).PadRight(23) } else { $rtxt = ''.PadRight(23) }
         $extra += (C $lc ($mark + $lab + ('{0,3}%' -f $p))) + (Dim $rtxt)
     } else { $extra += (Dim ('  ' + $lab + '  --').PadRight(33)) }
 }

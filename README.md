@@ -27,7 +27,7 @@ Barra de estado de 5 líneas para Claude Code en Windows (PowerShell 5.1). Pensa
 - **Diario (5 h)** y **semanal**, siempre visibles, con el porcentaje usado.
 - Colores: verde por debajo del 80 %, amarillo desde el 80 % y rojo por encima del 90 %.
 - **Parpadeo** del límite diario por encima del 92 % y del semanal por encima del 95 %.
-- **Hora real de reinicio** (`Reinicio 20:10`; si cae otro día, con el día: `Reinicio mié 12:00`).
+- **Hora real de reinicio** en formato de 12 horas (`Reinicio 8:10 PM`; si cae otro día, con el día: `Reinicio mié 12:00 PM`).
 - Si tu plan no tiene límites de uso (por ejemplo, uso por API), aparecen como `--`.
 
 ### Línea 4: acción en curso
