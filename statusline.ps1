@@ -21,7 +21,7 @@ $short = $sid.Substring(0, [math]::Min(4, $sid.Length))
 # ---- contexto ----
 $size = 200000
 if ($j.context_window -and $j.context_window.context_window_size) { $size = [double]$j.context_window.context_window_size }
-$used = $null; $agents = 0; $curTool = $null; $quiet = 0; $state = 'idle'; $since = $null; $first = $null; $last = $null
+$used = $null; $agents = 0; $curTool = $null; $quiet = 0; $mainQuiet = 0; $state = 'idle'; $since = $null; $first = $null; $last = $null
 $tp = $j.transcript_path
 if ($tp -and (Test-Path $tp)) {
     $fs = [IO.File]::Open($tp, 'Open', 'Read', 'ReadWrite')
@@ -148,6 +148,7 @@ if ($tp -and (Test-Path $tp)) {
     if ($live -gt $agents) { $agents = $live }
     $quiet = ($now - [IO.File]::GetLastWriteTime($tp)).TotalSeconds
     if ($state -eq 'work' -and $quiet -gt 180) { $state = 'idle' }
+    $mainQuiet = $quiet
     if ($live -gt 0) { $state = 'work'; $quiet = 0 }
 }
 
@@ -174,10 +175,15 @@ if ($state -eq 'work') {
     $frame = [string][char]$spin[$tick % $spin.Count]
     $el = ''
     if ($null -ne $since -and $since -ge 0) { $el = ' ' + [int]$since + 's' }
-    $badge = (C 214 ("$frame Trabajando$el").PadRight(16))
+    if ($agents -gt 0 -and $mainQuiet -gt 10) {
+        if ($agents -eq 1) { $wl = 'agente' } else { $wl = 'agentes' }
+        $badge = (C 141 ("$frame Esperando $agents $wl").PadRight(22))
+    } else {
+        $badge = (C 214 ("$frame Trabajando$el").PadRight(22))
+    }
 } else {
     if ($tick % 2 -eq 0) { $dot = [string][char]0x25CF } else { $dot = [string][char]0x25CB }
-    $badge = (C 82 ("$dot Libre").PadRight(16))
+    $badge = (C 82 ("$dot Libre").PadRight(22))
 }
 
 # ---- barra de contexto ----

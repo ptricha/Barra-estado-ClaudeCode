@@ -16,7 +16,8 @@ Barra de estado de 5 líneas para Claude Code en Windows (PowerShell 5.1). Pensa
 
 ### Línea 2: estado y contexto
 - **Estado**: `Trabajando` con spinner animado y los segundos desde tu último mensaje, o `Libre` con un punto parpadeante. Si el historial lleva más de 3 minutos sin actividad, pasa a `Libre`.
-- **Agentes**: número de agentes en marcha, contando los lanzados en primer plano y los de segundo plano (se leen de `<sesión>/subagents/agent-*.jsonl`; cuenta como activo el que se haya escrito en los últimos 45 s y no haya terminado). Mientras haya agentes activos, el estado es `Trabajando`.
+- **Esperando agentes**: si hay agentes en marcha y Claude lleva más de 10 s sin escribir en la conversación, el estado cambia a `Esperando N agentes` (en violeta) en vez de `Trabajando`. En cuanto Claude vuelve a actuar, regresa a `Trabajando`.
+- **Agentes**: número de agentes en marcha, contando los lanzados en primer plano y los de segundo plano (se leen de `<sesión>/subagents/agent-*.jsonl`; cuenta como activo el que se haya escrito en los últimos 45 s y no haya terminado). Mientras haya agentes activos, el estado nunca es `Libre`: es `Trabajando` o `Esperando agentes`.
 - **Barra de contexto** de 12 segmentos, con porcentaje y tokens usados en miles. Color: verde por debajo del 50 %, amarillo por debajo del 75 %, naranja por debajo del 90 % y rojo a partir de ahí.
 - **Aviso de `/compact`** a la derecha de la barra: no se muestra por debajo del 60 %; `/compact pronto` (amarillo) desde el 60 %, `/compact recomendado` (naranja) desde el 80 % y `/compact YA` (rojo parpadeante) desde el 85 %.
 
