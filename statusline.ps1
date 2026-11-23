@@ -302,9 +302,15 @@ try {
         if ($sj.mensaje) { $msg = [string]$sj.mensaje }
     }
 } catch {}
-# presupuesto de ancho compartido: el tema se muestra entero y el mensaje usa el espacio restante
-if ($first -and $first.Length -gt 75) { $first = Clip $first 75 }
-if ($msg) { $bud = 118 - $(if ($first) { $first.Length } else { 0 }); if ($bud -lt 30) { $bud = 30 }; $msg = Clip $msg $bud }
+# presupuesto de ancho compartido (118 car.): si tema + mensaje no caben, se recortan los dos en proporcion
+$tl = 0; if ($first) { $tl = $first.Length }
+$ml = 0; if ($msg) { $ml = $msg.Length }
+if ($tl + $ml -gt 118) {
+    $tmax = [int][math]::Max(28, [math]::Floor(118 * $tl / ($tl + $ml)))
+    $mmax = 118 - [math]::Min($tl, $tmax)
+    if ($first -and $tl -gt $tmax) { $first = Clip $first $tmax }
+    if ($msg -and $ml -gt $mmax) { $msg = Clip $msg $mmax }
+}
 $accion = 'Acci' + [string][char]0x00F3 + 'n   '
 if ($toolTxt) {
     $qt = ''
