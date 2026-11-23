@@ -1,5 +1,9 @@
 # Barra de estado para Claude Code
 
+![Vista previa de la barra](assets/preview.svg)
+
+_Datos de ejemplo. Los límites se ponen amarillos desde el 80 % y rojos por encima del 90 %._
+
 Barra de estado en 5 líneas para Claude Code (Windows, PowerShell 5.1): modelo, carpeta y rama, ruta abreviada, estado y agentes, contexto, límites diario/semanal con hora de reinicio, acción en curso, tema y resumen del último mensaje.
 
 ## Instalación
