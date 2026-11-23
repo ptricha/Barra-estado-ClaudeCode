@@ -298,10 +298,13 @@ try {
     $sf = Join-Path $env:USERPROFILE ".claude\state\sum-$sid.json"
     if (Test-Path $sf) {
         $sj = [IO.File]::ReadAllText($sf, [Text.Encoding]::UTF8) | ConvertFrom-Json
-        if (-not $manual -and $sj.tema) { $first = Clip ([string]$sj.tema) 60 }
-        if ($sj.mensaje) { $msg = Clip ([string]$sj.mensaje) 68 }
+        if (-not $manual -and $sj.tema) { $first = [string]$sj.tema }
+        if ($sj.mensaje) { $msg = [string]$sj.mensaje }
     }
 } catch {}
+# presupuesto de ancho compartido: el tema se muestra entero y el mensaje usa el espacio restante
+if ($first -and $first.Length -gt 75) { $first = Clip $first 75 }
+if ($msg) { $bud = 118 - $(if ($first) { $first.Length } else { 0 }); if ($bud -lt 30) { $bud = 30 }; $msg = Clip $msg $bud }
 $accion = 'Acci' + [string][char]0x00F3 + 'n   '
 if ($toolTxt) {
     $qt = ''
