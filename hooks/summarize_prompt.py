@@ -5,7 +5,7 @@ import json, os, subprocess, sys, tempfile
 STATE = os.path.join(os.path.expanduser('~'), '.claude', 'state')
 PROMPT = """Eres el generador de etiquetas de una barra de estado. El usuario tiene varios chats abiertos y necesita saber de un vistazo de que va cada uno.
 Devuelve SOLO un JSON valido, sin texto extra ni bloques de codigo: {"tema": "...", "mensaje": "..."}
-- "tema": de que va la conversacion en general, frase con sentido, maximo 45 caracteres, sin verbos de orden (ej: "Refactor del modulo de pagos y sus tests"). Si el tema anterior sigue valiendo, conservalo tal cual.
+- "tema": de que va la conversacion en general, frase con sentido, maximo 55 caracteres, sin verbos de orden (ej: "Refactor del modulo de pagos y sus tests"). Si el tema anterior sigue valiendo, conservalo tal cual.
 - "mensaje": resumen del ULTIMO mensaje del usuario, frase completa y con sentido, maximo 70 caracteres, en espanol (ej: "Usar PostgreSQL en vez de SQLite y esperar mas instrucciones").
 Tema anterior: {tema}
 Mensajes recientes del usuario (el ultimo es el mas reciente):

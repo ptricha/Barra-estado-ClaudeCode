@@ -189,9 +189,13 @@ if ($null -ne $used) {
     if ($pct -lt 50) { $cc = 82 } elseif ($pct -lt 75) { $cc = 226 } elseif ($pct -lt 90) { $cc = 208 } else { $cc = 196 }
     $full = [string][char]0x25B0; $emp = [string][char]0x25B1
     $bar = (C $cc ($full * $f)) + (Dim ($emp * ($w - $f)))
-    $warn = ''
-    if ($pct -ge 85) { if ($tick % 2 -eq 0) { $warn = ' ' + (C 196 '! /compact') } }
-    $ctx = "$bar " + (C $cc ("{0,3}%" -f [int]$pct)) + (Dim (" {0,4}k" -f [int]$k)) + $warn
+    # recomendacion de /compact segun el contexto usado
+    if ($pct -ge 85) { $tt = '/compact YA'; $tc = 196; if ($tick % 2 -ne 0) { $tc = 88 } }
+    elseif ($pct -ge 80) { $tt = '/compact recomendado'; $tc = 208 }
+    elseif ($pct -ge 60) { $tt = '/compact pronto'; $tc = 226 }
+    else { $tt = ''; $tc = 240 }
+    if ($tt) { $tag = C $tc $tt } else { $tag = '' }
+    $ctx = "$bar " + (C $cc ("{0,3}%" -f [int]$pct)) + (Dim (" {0,4}k" -f [int]$k)) + '  ' + $tag
 }
 
 # ---- coste / tiempo / lineas ----
@@ -211,7 +215,8 @@ foreach ($lim in @(@('five_hour', 'Diario 5h'), @('seven_day', 'Semanal'))) {
     if ($r -and $null -ne $r.used_percentage) {
         $p = [int][math]::Round([double]$r.used_percentage)
         if ($p -gt 90) { $lc = 196 } elseif ($p -ge 80) { $lc = 226 } else { $lc = 82 }
-        $mark = '  '; if ($p -gt 90 -and $tick % 2 -eq 0) { $mark = '! ' }
+        $bl = ($lim[0] -eq 'five_hour' -and $p -gt 92) -or ($lim[0] -eq 'seven_day' -and $p -gt 95)
+        $mark = '  '; if ($bl) { if ($tick % 2 -eq 0) { $mark = '! ' } else { $lc = 88 } }
         $rs = ''
         if ($r.resets_at) {
             try {
@@ -274,8 +279,8 @@ try {
     $sf = Join-Path $env:USERPROFILE ".claude\state\sum-$sid.json"
     if (Test-Path $sf) {
         $sj = [IO.File]::ReadAllText($sf, [Text.Encoding]::UTF8) | ConvertFrom-Json
-        if (-not $manual -and $sj.tema) { $first = Clip ([string]$sj.tema) 48 }
-        if ($sj.mensaje) { $msg = Clip ([string]$sj.mensaje) 72 }
+        if (-not $manual -and $sj.tema) { $first = Clip ([string]$sj.tema) 60 }
+        if ($sj.mensaje) { $msg = Clip ([string]$sj.mensaje) 68 }
     }
 } catch {}
 $accion = 'Acci' + [string][char]0x00F3 + 'n   '
