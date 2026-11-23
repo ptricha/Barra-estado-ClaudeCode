@@ -160,6 +160,9 @@ if ($tp -and (Test-Path $tp)) {
     if ($live -gt 0) { $state = 'work'; $quiet = 0 }
 }
 
+# parpadeo solo mientras Claude trabaja; en reposo todo queda fijo para no distraer al leer
+$ph = $true; if ($state -eq 'work') { $ph = ($tick % 2 -eq 0) }
+
 # ---- herramienta en curso ----
 $toolTxt = ''
 if ($state -eq 'work' -and $curTool) {
@@ -190,7 +193,7 @@ if ($state -eq 'work') {
         $badge = (C 214 ("$frame Trabajando$el").PadRight(22))
     }
 } else {
-    if ($tick % 2 -eq 0) { $dot = [string][char]0x25CF } else { $dot = [string][char]0x25CB }
+    if ($ph) { $dot = [string][char]0x25CF } else { $dot = [string][char]0x25CB }
     $badge = (C 82 ("$dot Libre").PadRight(22))
 }
 
@@ -204,7 +207,7 @@ if ($null -ne $used) {
     $full = [string][char]0x25B0; $emp = [string][char]0x25B1
     $bar = (C $cc ($full * $f)) + (Dim ($emp * ($w - $f)))
     # recomendacion de /compact segun el contexto usado
-    if ($pct -ge 85) { $tt = '/compact YA'; $tc = 196; if ($tick % 2 -ne 0) { $tc = 88 } }
+    if ($pct -ge 85) { $tt = '/compact YA'; $tc = 196; if (-not $ph) { $tc = 88 } }
     elseif ($pct -ge 80) { $tt = '/compact recomendado'; $tc = 208 }
     elseif ($pct -ge 60) { $tt = '/compact pronto'; $tc = 226 }
     else { $tt = ''; $tc = 240 }
@@ -232,7 +235,7 @@ foreach ($lim in @(@('five_hour', 'Diario 5h'), @('seven_day', 'Semanal'))) {
         $p = [int][math]::Round([double]$r.used_percentage)
         if ($p -gt 90) { $lc = 196 } elseif ($p -ge 80) { $lc = 226 } else { $lc = 82 }
         $bl = ($lim[0] -eq 'five_hour' -and $p -gt 92) -or ($lim[0] -eq 'seven_day' -and $p -gt 95)
-        $mark = '  '; if ($bl) { if ($tick % 2 -eq 0) { $mark = '! ' } else { $lc = 88 } }
+        $mark = '  '; if ($bl) { if ($ph) { $mark = '! ' } else { $lc = 88 } }
         $rs = ''
         if ($r.resets_at) {
             try {
