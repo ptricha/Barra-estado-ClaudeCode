@@ -6,7 +6,7 @@ function Dim($s) { "$E[2m$s$E[0m" }
 function Bold($s) { "$E[1m$s$E[0m" }
 function Clip($s, $n) { $s = ($s -replace '\s+', ' ').Trim(); if ($s.Length -gt $n) { $s.Substring(0, $n - 1) + [string][char]0x2026 } else { $s } }
 
-$sep = Dim "   $([char]0x00B7)   "
+$sep = Dim "  $([char]0x00B7)  "
 $now = Get-Date
 $tick = [int]$now.TimeOfDay.TotalSeconds
 
@@ -60,7 +60,7 @@ if ($tp -and (Test-Path $tp)) {
         if ($cands.Count -lt 8 -and $o.type -eq 'user' -and -not $o.isMeta) {
             $c = $o.message.content
             if ($c -is [string]) { $t = $c } else { $t = ($c | Where-Object { $_.type -eq 'text' } | ForEach-Object { $_.text }) -join ' ' }
-            if ($t -and $t -notmatch '^\s*<(system-reminder|command-|local-command|pasted)') {
+            if ($t -and $t -notmatch '^\s*<[A-Za-z]') {
                 if ($null -eq $last) {
                     $last = $t
                     try { $since = ($now.ToUniversalTime() - ([datetime]$o.timestamp).ToUniversalTime()).TotalSeconds } catch {}
@@ -70,6 +70,16 @@ if ($tp -and (Test-Path $tp)) {
         }
         if ($null -ne $used -and $gotState -and $cands.Count -ge 8 -and $null -ne $first) { break }
     }
+    # cache de mensajes: si la cola del transcript (salidas enormes de agentes) no trae mensajes de usuario, usa los ultimos guardados
+    try {
+        $cf = Join-Path $env:USERPROFILE ".claude\state\msgs-$sid.txt"
+        if ($cands.Count) {
+            $nw = ($cands -join "`n")
+            if (-not (Test-Path $cf) -or [IO.File]::ReadAllText($cf, [Text.Encoding]::UTF8) -ne $nw) { [IO.File]::WriteAllText($cf, $nw, (New-Object Text.UTF8Encoding($false))) }
+        } elseif (Test-Path $cf) {
+            $cands = @([IO.File]::ReadAllText($cf, [Text.Encoding]::UTF8) -split "`n" | Where-Object { $_ })
+        }
+    } catch {}
     # tema manual (prioridad): ~/.claude/state/topic-<session_id>.txt
     try { $tf = Join-Path $env:USERPROFILE ".claude\state\topic-$sid.txt"; if (Test-Path $tf) { $tt = (Get-Content $tf -TotalCount 1 -Encoding UTF8).Trim(); if ($tt) { $first = $tt; $manual = $true } } } catch {}
     # tema: titulo de sesion generado por Claude (ultimo ai-title); si no esta en la cola, mirar el principio
@@ -120,8 +130,25 @@ if ($tp -and (Test-Path $tp)) {
         if ($keep.Count -ge 2) { $resumen = $keep -join ' ' }
     }
     # transcript sin actividad reciente => no esta trabajando
+    # subagentes en segundo plano: sus transcripts viven en <sesion>/subagents/agent-*.jsonl
+    $live = 0
+    try {
+        $sd = Join-Path (Join-Path (Split-Path $tp -Parent) ([IO.Path]::GetFileNameWithoutExtension($tp))) 'subagents'
+        if (Test-Path $sd) {
+            foreach ($af in Get-ChildItem $sd -Filter 'agent-*.jsonl') {
+                if (($now - $af.LastWriteTime).TotalSeconds -gt 45) { continue }
+                $as = [IO.File]::Open($af.FullName, 'Open', 'Read', 'ReadWrite')
+                $tk = [math]::Min($as.Length, 6KB); $null = $as.Seek($as.Length - $tk, 'Begin')
+                $ab = New-Object byte[] $tk; $null = $as.Read($ab, 0, $tk); $as.Close()
+                $al = @([Text.Encoding]::UTF8.GetString($ab) -split "`n" | Where-Object { $_.Trim() })
+                if ($al.Count -and $al[$al.Count - 1] -notmatch '"stop_reason":"end_turn"') { $live++ }
+            }
+        }
+    } catch {}
+    if ($live -gt $agents) { $agents = $live }
     $quiet = ($now - [IO.File]::GetLastWriteTime($tp)).TotalSeconds
     if ($state -eq 'work' -and $quiet -gt 180) { $state = 'idle' }
+    if ($live -gt 0) { $state = 'work'; $quiet = 0 }
 }
 
 # ---- herramienta en curso ----
@@ -147,10 +174,10 @@ if ($state -eq 'work') {
     $frame = [string][char]$spin[$tick % $spin.Count]
     $el = ''
     if ($null -ne $since -and $since -ge 0) { $el = ' ' + [int]$since + 's' }
-    $badge = (C 214 ("$frame Trabajando$el").PadRight(18))
+    $badge = (C 214 ("$frame Trabajando$el").PadRight(16))
 } else {
     if ($tick % 2 -eq 0) { $dot = [string][char]0x25CF } else { $dot = [string][char]0x25CB }
-    $badge = (C 78 ("$dot Libre").PadRight(18))
+    $badge = (C 82 ("$dot Libre").PadRight(16))
 }
 
 # ---- barra de contexto ----
@@ -159,7 +186,7 @@ if ($null -ne $used) {
     $pct = [math]::Min(100, [math]::Round(100 * $used / $size))
     $k = [math]::Round($used / 1000)
     $w = 12; $f = [math]::Round($pct / 100 * $w)
-    if ($pct -lt 50) { $cc = 78 } elseif ($pct -lt 75) { $cc = 220 } elseif ($pct -lt 90) { $cc = 208 } else { $cc = 196 }
+    if ($pct -lt 50) { $cc = 82 } elseif ($pct -lt 75) { $cc = 226 } elseif ($pct -lt 90) { $cc = 208 } else { $cc = 196 }
     $full = [string][char]0x25B0; $emp = [string][char]0x25B1
     $bar = (C $cc ($full * $f)) + (Dim ($emp * ($w - $f)))
     $warn = ''
@@ -173,7 +200,7 @@ if ($j.cost) {
     if ($null -ne $j.cost.total_duration_ms) {
         $m = [int]([double]$j.cost.total_duration_ms / 60000)
         if ($m -ge 60) { $tm = '{0}h{1:00}m' -f [int][math]::Floor($m / 60), ($m % 60) } else { $tm = "${m}m" }
-        $extra += (Dim 'Sesion ') + (C 252 $tm)
+        
     }
 }
 # limites de uso: siempre visibles; >=80% amarillo, >90% rojo; hora real de reinicio
@@ -183,7 +210,7 @@ foreach ($lim in @(@('five_hour', 'Diario 5h'), @('seven_day', 'Semanal'))) {
     $lab = ([string]$lim[1]).PadRight(9)
     if ($r -and $null -ne $r.used_percentage) {
         $p = [int][math]::Round([double]$r.used_percentage)
-        if ($p -gt 90) { $lc = 196 } elseif ($p -ge 80) { $lc = 220 } else { $lc = 78 }
+        if ($p -gt 90) { $lc = 196 } elseif ($p -ge 80) { $lc = 226 } else { $lc = 82 }
         $mark = '  '; if ($p -gt 90 -and $tick % 2 -eq 0) { $mark = '! ' }
         $rs = ''
         if ($r.resets_at) {
@@ -192,7 +219,7 @@ foreach ($lim in @(@('five_hour', 'Diario 5h'), @('seven_day', 'Semanal'))) {
                 if ($dt.Date -eq $now.Date) { $rs = $dt.ToString('HH:mm') } else { $rs = $dias[[int]$dt.DayOfWeek] + ' ' + $dt.ToString('HH:mm') }
             } catch {}
         }
-        if ($rs) { $rtxt = ('  Reinicio ' + $rs).PadRight(19) } else { $rtxt = ''.PadRight(19) }
+        if ($rs) { $rtxt = ('  Reinicio ' + $rs).PadRight(20) } else { $rtxt = ''.PadRight(20) }
         $extra += (C $lc ($mark + $lab + ('{0,3}%' -f $p))) + (Dim $rtxt)
     } else { $extra += (Dim ('  ' + $lab + '  --').PadRight(33)) }
 }
@@ -216,8 +243,8 @@ $gl = Dim ' '
 $rows = @()
 
 $r1 = (C $col ([string][char]0x25C6)) + ' ' + (Bold (C $col $dir))
-if ($branch) { $r1 += '  ' + (Dim ([string][char]0xE0A0)) + ' ' + (C 141 $branch) }
-$r1 += $sep + (Bold (C 252 $j.model.display_name))
+if ($branch) { $r1 += '  ' + (Dim ([string][char]0xE0A0)) + ' ' + (C 213 $branch) }
+$r1 += $sep + (Bold (C 214 $j.model.display_name))
 $full2 = $cwd; if ($env:USERPROFILE -and $full2.StartsWith($env:USERPROFILE, 'OrdinalIgnoreCase')) { $full2 = '~' + $full2.Substring($env:USERPROFILE.Length) }
 $full2 = $full2 -replace '/', '\'
 if ($full2.Length -gt 38) {
@@ -230,30 +257,38 @@ if ($full2.Length -gt 38) {
     }
     if ($full2.Length -gt 38) { $full2 = Clip $full2 38 }
 }
-$r1 += $sep + (C 111 $full2)
+$r1 += $sep + (C 117 $full2)
 $rows += $r1
 
-$agTxt = ("$([char]0x25C8) $agents " + $(if ($agents -eq 1) { 'Agente' } else { 'Agentes' })).PadRight(13)
-if ($agents -gt 0) { $ag = C 214 $agTxt } else { $ag = Dim $agTxt }
+$agTxt = ("$([char]0x25C8) $agents " + $(if ($agents -eq 1) { 'Agente' } else { 'Agentes' })).PadRight(12)
+if ($agents -gt 0) { $ag = C 141 $agTxt } else { $ag = Dim $agTxt }
 $r2 = $badge + $sep + $ag + $sep + $ctx
-if ($extra.Count) { $r2 += $sep + ($extra -join $sep) }
 $rows += $r2
+if ($extra.Count) { $rows += (C $col ([string][char]0x25D4)) + ' ' + ($extra -join $sep) }
 
 $msg = $resumen; if (-not $msg) { $msg = $ctxMsg }
 function Cap($t) { if ($t) { $t.Substring(0,1).ToUpper() + $t.Substring(1) } else { $t } }
 $msg = Cap $msg; $first = Cap $first
+# resumen generado por Haiku (hook UserPromptSubmit): tema y mensaje con sentido
+try {
+    $sf = Join-Path $env:USERPROFILE ".claude\state\sum-$sid.json"
+    if (Test-Path $sf) {
+        $sj = [IO.File]::ReadAllText($sf, [Text.Encoding]::UTF8) | ConvertFrom-Json
+        if (-not $manual -and $sj.tema) { $first = Clip ([string]$sj.tema) 48 }
+        if ($sj.mensaje) { $msg = Clip ([string]$sj.mensaje) 72 }
+    }
+} catch {}
 $accion = 'Acci' + [string][char]0x00F3 + 'n   '
 if ($toolTxt) {
     $qt = ''
     if ($quiet -gt 45) { if ($quiet -ge 60) { $qt = '   ' + (C 220 ("sin actividad $([int][math]::Floor($quiet / 60))m")) } else { $qt = '   ' + (C 220 ("sin actividad $([int]$quiet)s")) } }
-    $rows += (C $col ([string][char]0x25B8)) + ' ' + (Dim $accion) + (C 214 $toolTxt) + $qt
+    $rows += (C $col ([string][char]0x25B8)) + ' ' + (Dim $accion) + (C 208 $toolTxt) + $qt
 } else {
     $rows += (C $col ([string][char]0x25B8)) + ' ' + (Dim $accion) + (Dim 'En espera')
 }
-if ($first) { $rows += (C $col ([string][char]0x2726)) + ' ' + (Dim 'Tema     ') + (Bold (C 252 $first)) }
-if ($msg) { $rows += (C $col ([string][char]0x270E)) + ' ' + (Dim 'Mensaje  ') + (C 250 $msg) }
+$tm = ''
+if ($first) { $tm += (C $col ([string][char]0x2726)) + ' ' + (Dim 'Tema ') + (Bold (C 87 $first)) }
+if ($msg) { if ($tm) { $tm += $sep }; $tm += (C $col ([string][char]0x270E)) + ' ' + (Dim 'Mensaje ') + (C 183 $msg) }
+if ($tm) { $rows += $tm }
 
-for ($i = 0; $i -lt $rows.Count; $i++) {
-    if ($i -eq 0) { $g = [char]0x256D } elseif ($i -eq $rows.Count - 1) { $g = [char]0x2570 } else { $g = [char]0x251C }
-    (C $col "$g$hz") + ' ' + $rows[$i]
-}
+foreach ($row in $rows) { ' ' + $row }
