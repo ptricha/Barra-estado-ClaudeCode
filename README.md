@@ -21,6 +21,8 @@ Barra de estado de 5 líneas para Claude Code en Windows (PowerShell 5.1). Pensa
 - **Barra de contexto** de 12 segmentos, con porcentaje y tokens usados en miles. Color: verde por debajo del 50 %, amarillo por debajo del 75 %, naranja por debajo del 90 % y rojo a partir de ahí.
 - **Aviso de `/compact`** a la derecha de la barra: no se muestra por debajo del 60 %; `/compact pronto` (amarillo) desde el 60 %, `/compact recomendado` (naranja) desde el 80 % y `/compact YA` (rojo parpadeante) desde el 85 %.
 
+- **Skill de ahorro de tokens**: si en la sesión se ha usado la skill `ahorro-tokens` (invocada como herramienta `Skill` o con el comando `/ahorro-tokens`), aparece `◉ Ahorro tokens` en verde azulado justo a la derecha del aviso de `/compact`. Se recuerda durante el resto de la sesión (archivo `~/.claude/state/skill-<id de sesión>.txt`). Para vigilar otra skill, cambia `ahorro-tokens` por su nombre en la expresión regular de `statusline.ps1` (busca `ahorro-tokens`) y el texto `Ahorro tokens`.
+
 ### Línea 3: límites de uso
 - **Diario (5 h)** y **semanal**, siempre visibles, con el porcentaje usado.
 - Colores: verde por debajo del 80 %, amarillo desde el 80 % y rojo por encima del 90 %.

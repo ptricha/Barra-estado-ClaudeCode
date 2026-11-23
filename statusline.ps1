@@ -21,7 +21,7 @@ $short = $sid.Substring(0, [math]::Min(4, $sid.Length))
 # ---- contexto ----
 $size = 200000
 if ($j.context_window -and $j.context_window.context_window_size) { $size = [double]$j.context_window.context_window_size }
-$used = $null; $agents = 0; $curTool = $null; $quiet = 0; $mainQuiet = 0; $state = 'idle'; $since = $null; $first = $null; $last = $null
+$used = $null; $skillOn = $false; $agents = 0; $curTool = $null; $quiet = 0; $mainQuiet = 0; $state = 'idle'; $since = $null; $first = $null; $last = $null
 $tp = $j.transcript_path
 if ($tp -and (Test-Path $tp)) {
     $fs = [IO.File]::Open($tp, 'Open', 'Read', 'ReadWrite')
@@ -29,7 +29,7 @@ if ($tp -and (Test-Path $tp)) {
     $null = $fs.Seek($len - $take, 'Begin')
     $buf = New-Object byte[] $take
     $null = $fs.Read($buf, 0, $take); $fs.Close()
-    $lines = [Text.Encoding]::UTF8.GetString($buf) -split "`n"
+    $rawTxt = [Text.Encoding]::UTF8.GetString($buf); $lines = $rawTxt -split "`n"
     if ($take -lt $len) { $lines = $lines[1..($lines.Count - 1)] }
     $lines = @($lines | Where-Object { $_.Trim() })
     $manual = $false; $gotState = $false; $cands = @(); $ctxMsg = $null; $doneIds = @{}; $agents = 0
@@ -70,6 +70,14 @@ if ($tp -and (Test-Path $tp)) {
         }
         if ($null -ne $used -and $gotState -and $cands.Count -ge 8 -and $null -ne $first) { break }
     }
+    # skill de ahorro de tokens en uso (se detecta al invocarla y se recuerda durante la sesion)
+    try {
+        $kf = Join-Path $env:USERPROFILE ".claude\state\skill-$sid.txt"
+        if ($rawTxt -match '"skill"\s*:\s*"(ecc:)?ahorro-tokens"|<command-name>/?ahorro-tokens') {
+            $skillOn = $true
+            if (-not (Test-Path $kf)) { [IO.File]::WriteAllText($kf, '1') }
+        } elseif (Test-Path $kf) { $skillOn = $true }
+    } catch {}
     # cache de mensajes: si la cola del transcript (salidas enormes de agentes) no trae mensajes de usuario, usa los ultimos guardados
     try {
         $cf = Join-Path $env:USERPROFILE ".claude\state\msgs-$sid.txt"
@@ -203,6 +211,8 @@ if ($null -ne $used) {
     if ($tt) { $tag = C $tc $tt } else { $tag = '' }
     $ctx = "$bar " + (C $cc ("{0,3}%" -f [int]$pct)) + (Dim (" {0,4}k" -f [int]$k)) + '  ' + $tag
 }
+
+if ($skillOn) { $ctx += '  ' + (C 49 "$([char]0x25C9) Ahorro tokens") }
 
 # ---- coste / tiempo / lineas ----
 $extra = @()
