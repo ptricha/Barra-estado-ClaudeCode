@@ -39,7 +39,7 @@ Barra de estado de 5 líneas para Claude Code en Windows (PowerShell 5.1). Pensa
 ### Línea 5: tema y resumen del último mensaje
 - **Tema**: de qué va la conversación en general, para distinguir un chat de otro.
 - **Mensaje**: resumen del último mensaje que enviaste.
-- Ambos van en la misma línea y comparten un ancho de 118 caracteres. Al hook se le pide un tema de máximo 40 caracteres y un mensaje de máximo 65, para que quepan enteros y se gasten menos tokens de salida. Si aun así no caben, se recortan los dos en proporción, con `…`.
+- Ambos van en la misma línea y comparten un ancho de 118 caracteres. Al hook se le pide un tema de máximo 40 caracteres y un mensaje de máximo 65, para que quepan enteros y se gasten menos tokens de salida. Si aun así no caben, se recortan los dos en proporción, con `…`. Si Haiku se pasa de largo, el hook le pide una vez que lo reescriba más corto conservando el sentido (solo en ese caso hay una segunda llamada).
 - Ignora los mensajes automáticos del sistema (notificaciones de tareas, etc.).
 - Guarda los últimos mensajes en una caché, de modo que siguen apareciendo aunque el historial se llene de salidas largas de agentes.
 - Origen del tema, por prioridad: archivo manual, resumen de Haiku (si instalas el hook) y, como respaldo gratuito, palabras clave de los últimos mensajes.

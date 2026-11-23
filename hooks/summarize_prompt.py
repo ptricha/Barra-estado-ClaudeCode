@@ -30,15 +30,22 @@ def worker(sid):
     text = PROMPT.replace('{tema}', d.get('tema') or '(ninguno)').replace(
         '{prompts}', '\n'.join('- ' + p[:600] for p in prompts))
     env = dict(os.environ, CC_SUMMARY_JOB='1')
-    r = subprocess.run(
-        ['claude', '-p', '--model', 'haiku', '--no-session-persistence', '--disable-slash-commands',
-         '--strict-mcp-config', '--tools', '', '--system-prompt', 'Responde solo con lo pedido.',
-         '--output-format', 'text', text],
-        capture_output=True, text=True, encoding='utf-8', env=env, cwd=tempfile.gettempdir(), timeout=120,
-        creationflags=0x08000000)
-    out = r.stdout.strip()
-    a, b = out.find('{'), out.rfind('}')
-    res = json.loads(out[a:b + 1])
+
+    def ask(txt):
+        r = subprocess.run(
+            ['claude', '-p', '--model', 'haiku', '--no-session-persistence', '--disable-slash-commands',
+             '--strict-mcp-config', '--tools', '', '--system-prompt', 'Responde solo con lo pedido.',
+             '--output-format', 'text', txt],
+            capture_output=True, text=True, encoding='utf-8', env=env, cwd=tempfile.gettempdir(), timeout=120,
+            creationflags=0x08000000)
+        out = r.stdout.strip()
+        return json.loads(out[out.find('{'):out.rfind('}') + 1])
+
+    res = ask(text)
+    # si se pasa de largo, un segundo intento pidiendo reescribirlo mas corto (conserva el sentido)
+    if len(str(res.get('tema', ''))) > 40 or len(str(res.get('mensaje', ''))) > 65:
+        res = ask(text + ' Tu respuesta anterior fue demasiado larga: ' + json.dumps(res, ensure_ascii=False)
+                  + ' Reescribela MAS CORTA conservando el sentido: tema maximo 40 caracteres y mensaje maximo 65.')
     d = load(sid)  # recargar por si llego otro mensaje mientras tanto
     d['tema'] = str(res.get('tema', d.get('tema', ''))).strip()
     d['mensaje'] = str(res.get('mensaje', '')).strip()
